@@ -3,7 +3,7 @@ import { getTrendingArtists } from "../services/artists.api.js";
 import httpRequest from "../utils/httpRequest.js";
 import { toast } from "./notify.js";
 import { attachContextMenu } from "./contextMenu.js";
-
+import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
 export async function renderTrendingArtists() {
   const grid = document.querySelector(".artists-grid");
   if (!grid) {
@@ -64,6 +64,7 @@ function initArtistContextMenu() {
     try {
       await httpRequest.post(`artists/${data.id}/follow`, {});
       toast.success("Đã theo dõi nghệ sĩ.");
+      triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);
     } catch (err) {
       // treat 409 as already followed
       if (err && err.status === 409) {

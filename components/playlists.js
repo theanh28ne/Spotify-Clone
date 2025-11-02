@@ -10,7 +10,65 @@ import { renderLikedSongsHero } from "./likeSongs.js";
 const renderAlbums = renderFollowedAlbums;
 const renderArtists = renderFollowedArtists;
 
+// ===== LIBRARY REFRESH SYSTEM =====
+let currentTab = null; // Lưu tab hiện tại
 
+// Custom event để trigger refresh
+export const LibraryEvents = {
+  PLAYLIST_ADDED: "library:playlist:added",
+  PLAYLIST_DELETED: "library:playlist:deleted",
+  ALBUM_ADDED: "library:album:added",
+  ALBUM_DELETED: "library:album:deleted",
+  ARTIST_ADDED: "library:artist:added",
+  ARTIST_DELETED: "library:artist:deleted",
+  TRACK_LIKED: "library:track:liked",
+  TRACK_UNLIKED: "library:track:unliked"
+};
+
+// Hàm dispatch event
+export function triggerLibraryRefresh(eventType) {
+  const event = new CustomEvent(eventType, { detail: { timestamp: Date.now() } });
+  document.dispatchEvent(event);
+}
+
+// Hàm refresh library dựa trên tab hiện tại
+async function refreshCurrentTab() {
+  if (!currentTab) return;
+  
+  const container = document.querySelector(".library-content");
+  if (!container) return;
+
+  const label = (currentTab.textContent || "").trim().toLowerCase();
+  
+  console.log(`🔄 Refreshing library tab: ${label}`);
+  
+  try {
+    if (label === "all") {
+      await renderAll(container);
+    } else if (label === "playlists") {
+      await renderPlaylists(container);
+    } else if (label === "artists") {
+      await renderArtists(container);
+    } else if (label === "albums") {
+      await renderAlbums(container);
+    }
+  } catch (err) {
+    console.error("Lỗi refresh library:", err);
+  }
+}
+
+// Setup event listeners cho auto-refresh
+function setupLibraryRefreshListeners() {
+  // Listen tất cả các events
+  Object.values(LibraryEvents).forEach(eventType => {
+    document.addEventListener(eventType, () => {
+      refreshCurrentTab();
+    });
+  });
+  
+  console.log("✅ Library auto-refresh listeners đã được khởi tạo");
+}
+// ===== END LIBRARY REFRESH SYSTEM =====
 
 
 function ensureAuth() {
@@ -28,13 +86,9 @@ function mapToPlayerTrack(t) {
 
   return {
     id: t.id || t.track_id || t.trackId || null,
-
     title: t.title || t.name || t.track_title || t.track_name || t.track_title || "",
-
     audio_url: t.audio_url || t.track_audio_url || t.path || t.stream_url || t.streamUrl || "",
-
     artist_name: t.artist_name || t.artist || t.artist_name || t.artist_name || (t.artists && t.artists[0]?.name) || "",
-
     play_count: t.play_count ?? t.track_play_count ?? t.plays ?? 0,
     duration: t.duration ?? t.track_duration ?? t.total_duration ?? 0,
     image_url: t.image_url || t.track_image_url || t.cover_image_url || t.album_cover_image_url || t.artist_image_url || ""
@@ -97,7 +151,6 @@ export async function renderPlaylists(container = document.querySelector(".libra
     let playlists = await playlistAPI.getAll(50, 0);
     if (!Array.isArray(playlists)) playlists = playlists?.data || playlists?.playlists || [];
 
-
     playlists = playlists.filter(p => !isLikedPlaylist(p));
 
     if (!playlists || playlists.length === 0) {
@@ -126,7 +179,6 @@ export async function renderAll(container = document.querySelector(".library-con
   if (!container) return;
   container.innerHTML = "";
 
-
   let likedCount = null;
   try {
     if (ensureAuth()) {
@@ -140,7 +192,6 @@ export async function renderAll(container = document.querySelector(".library-con
   }
 
   container.insertAdjacentHTML("beforeend", renderLikedSongsItemHtml(likedCount));
-
 
   try {
     let playlists = ensureAuth() ? await playlistAPI.getAll(50, 0) : [];
@@ -158,13 +209,10 @@ export async function renderAll(container = document.querySelector(".library-con
         </div>
       `).join("");
       container.insertAdjacentHTML("beforeend", html);
-    } else {
-
     }
   } catch (err) {
     container.insertAdjacentHTML("beforeend", `<p class="error">Cannot load playlists</p>`);
   }
-
 
   try {
     const albums = ensureAuth() ? await playlistAPI.getLikedAlbums(50, 0) : [];
@@ -179,13 +227,10 @@ export async function renderAll(container = document.querySelector(".library-con
         </div>
       `).join("");
       container.insertAdjacentHTML("beforeend", html);
-    } else {
-
     }
   } catch (err) {
     container.insertAdjacentHTML("beforeend", `<p class="error">Cannot load albums</p>`);
   }
-
 
   try {
     const artists = ensureAuth() ? await playlistAPI.getFollowingArtists(50, 0) : [];
@@ -200,8 +245,6 @@ export async function renderAll(container = document.querySelector(".library-con
         </div>
       `).join("");
       container.insertAdjacentHTML("beforeend", html);
-    } else {
-
     }
   } catch (err) {
     container.insertAdjacentHTML("beforeend", `<p class="error">Cannot load artists</p>`);
@@ -216,6 +259,7 @@ export async function initLibraryTabs() {
 
   async function showTab(tabEl) {
     tabs.forEach(t => t.classList.toggle("active", t === tabEl));
+    currentTab = tabEl; // Lưu tab hiện tại
     container.innerHTML = "";
 
     const label = (tabEl?.textContent || "").trim().toLowerCase();
@@ -235,8 +279,6 @@ export async function initLibraryTabs() {
       console.error("Lỗi render tab library:", err);
       container.insertAdjacentHTML("beforeend", `<p class="error">Không thể tải dữ liệu.</p>`);
     }
-
-
   }
 
   const active = tabs.find(t => t.classList.contains("active")) || tabs[1] || tabs[0];
@@ -250,7 +292,6 @@ export async function initLibraryTabs() {
   container.addEventListener("click", async (e) => {
     const item = e.target.closest(".library-item");
     if (!item) return;
-
 
     container.querySelectorAll(".library-item").forEach(i => i.classList.remove("active"));
     item.classList.add("active");
@@ -280,7 +321,6 @@ export async function initLibraryTabs() {
       }
 
       if (type === "playlist" && id) {
-        // GET /api/playlists/:playlistId/tracks
         const res = await httpRequest.get(`playlists/${id}/tracks`);
         const tracks = Array.isArray(res) ? res : (res?.tracks || res?.data || []);
         const mapped = tracks.map(mapToPlayerTrack);
@@ -297,7 +337,6 @@ export async function initLibraryTabs() {
       }
 
       if (type === "album" && id) {
-        // GET /api/albums/:albumId/tracks
         const res = await httpRequest.get(`albums/${id}/tracks`);
         const tracks = Array.isArray(res) ? res : (res?.tracks || res?.data || []);
         const mapped = tracks.map(mapToPlayerTrack);
@@ -315,7 +354,6 @@ export async function initLibraryTabs() {
       }
 
       if (type === "artist" && id) {
-        // GET /api/artists/:artistId/tracks/popular
         const res = await httpRequest.get(`artists/${id}/tracks/popular`);
         const tracks = Array.isArray(res) ? res : (res?.tracks || res?.data || []);
         const mapped = tracks.map(mapToPlayerTrack);
@@ -334,21 +372,25 @@ export async function initLibraryTabs() {
       console.error("Lỗi khi tải tracks từ library item:", err);
     }
   });
+  
+  // Setup auto-refresh listeners
+  setupLibraryRefreshListeners();
 }
 
 export function initCreatePlaylistButton() {
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".add-btn");
     if (!btn) return;
-
+    
+    // TODO: Logic tạo playlist ở đây
+    // Sau khi tạo xong, gọi:
+    // triggerLibraryRefresh(LibraryEvents.PLAYLIST_ADDED);
   });
 }
 
 
-
 import { initLibraryContextMenu } from "./deleteLibraryItem.js";
-
-
 initLibraryContextMenu();
 
-
+import { initSearchLibrary, resetSearchOnTabChange, clearSearchCache } from "./searchLibrary.js";
+initSearchLibrary();

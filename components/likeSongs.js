@@ -3,7 +3,7 @@ import { playlistAPI } from "../services/playlist.api.js";
 import player from "./player.js";
 import { toMMSS } from "../utils/formatTime.js";
 import { toast } from "./notify.js";
-
+import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
 function ensureAuth() {
     const token = localStorage.getItem("accessToken");
     if (!token) return false;
@@ -54,6 +54,7 @@ export function initLikeButton() {
                     likeCountEl.textContent = c + 1;
                 }
                 toast.success("Đã thích bài hát.");
+                triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);
             } else {
                 toast.info("Bài hát đã tồn tại trong Liked Songs.");
             }

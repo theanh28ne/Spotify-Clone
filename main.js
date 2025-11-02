@@ -8,40 +8,23 @@ import { getArtistById, getArtistPopularTracks } from "./services/artists.api.js
 import { renderAlbumHero, renderAlbumTracks } from "./components/albumTracks.js";
 import { renderArtistHero, renderArtistTracks } from "./components/artistTracks.js";
 import player from "./components/player.js";
-import { initAuthUI, initAuthModal, initUserMenu, fetchAndRenderUser } from "./components/auth.js";
 
 
 document.addEventListener("DOMContentLoaded", async () => {
-
-    initAuthUI();
-    initAuthModal();
-    initUserMenu();
-
-
-    const token = localStorage.getItem("accessToken");
-    if (token && typeof httpRequest.setToken === "function") {
-        httpRequest.setToken(token);
-    }
-
-
+    // Render playlists
     await renderPlaylists();
     initLibraryTabs();
 
-
-    if (token) {
-        await fetchAndRenderUser();
-    }
-
-
+    // Render home content
     renderPopularAlbums();
     renderTrendingArtists();
 
-
+    // Init playlist và like buttons
     initCreatePlaylistButton();
     initLikeButton();
     initLikedSongsHandler();
 
-
+    // Show home view
     showHomeView();
 });
 
@@ -58,7 +41,6 @@ function showHomeView() {
     if (hero) hero.style.display = "none";
     if (controls) controls.style.display = "none";
     if (popular) popular.style.display = "none";
-
 
     const wrapper = document.querySelector(".content-wrapper");
     if (wrapper) wrapper.dataset.view = "home";
@@ -143,17 +125,12 @@ if (library) {
 }
 
 
-document.addEventListener("DOMContentLoaded", () => {
-    showHomeView();
-});
-
-
+// Context menu protection
 (function () {
     const DOUBLE_MS = 400;
     let lastRightTs = 0;
     let allowNextContext = false;
     let clearTimer = null;
-
 
     const ALLOWED_CUSTOM_SELECTORS = [
         ".library-item",
@@ -163,9 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ".ctx-allow"
     ].join(",");
 
-
     document.addEventListener("contextmenu", (e) => {
-
         const path = e.composedPath ? e.composedPath() : (e.path || []);
         const isAllowedTarget = path.some(node => {
             try {
@@ -183,3 +158,4 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
     });
 })();
+

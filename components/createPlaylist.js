@@ -1,4 +1,5 @@
 // Plain script (non-module) to manage Create Playlist modal, upload image and create playlist via API.
+import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
 
 (function () {
     const overlay = document.querySelector(".playlist-modal-overlay");
@@ -194,7 +195,7 @@
             }
             const data = await resp.json();
             showToast("success", "Đã tạo playlist.");
-
+            triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);
             const ev = new CustomEvent("playlist:created", { detail: data });
             document.dispatchEvent(ev);
 

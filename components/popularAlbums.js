@@ -2,7 +2,7 @@ import { albumAPI } from "../services/album.api.js";
 import httpRequest from "../utils/httpRequest.js";
 import { toast } from "./notify.js";
 import { attachContextMenu } from "./contextMenu.js";
-
+import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
 export async function renderPopularAlbums() {
   const grid = document.querySelector(".hits-grid");
   if (!grid) return;
@@ -57,6 +57,7 @@ function initAlbumContextMenu() {
       ensureAuthTokenOnRequest();
       await httpRequest.post(`albums/${data.id}/like`, {});
       toast.success("Đã thêm album vào thư viện.");
+      triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);
     } catch (err) {
       if (err && err.status === 409) {
         toast.info("Album đã tồn tại trong thư viện.");

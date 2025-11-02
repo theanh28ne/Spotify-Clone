@@ -191,3 +191,22 @@ export function initUserMenu() {
         if (e.key === "Escape") userDropdown.classList.remove("show");
     });
 }
+
+// Auto-initialize khi file được load
+document.addEventListener("DOMContentLoaded", async () => {
+    // Set token từ localStorage nếu có
+    const token = localStorage.getItem("accessToken");
+    if (token && typeof httpRequest.setToken === "function") {
+        httpRequest.setToken(token);
+    }
+
+    // Khởi tạo tất cả auth UI
+    initAuthUI();
+    initAuthModal();
+    initUserMenu();
+
+    // Fetch user info nếu đã login
+    if (token) {
+        await fetchAndRenderUser();
+    }
+});
