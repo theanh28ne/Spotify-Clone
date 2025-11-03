@@ -1,3 +1,4 @@
+//renderAlbums.js
 import { albumAPI } from "../services/album.api.js";
 import httpRequest from "../utils/httpRequest.js";
 import { toast } from "./notify.js";
@@ -35,9 +36,12 @@ export async function renderPopularAlbums() {
 
 function ensureAuthTokenOnRequest() {
   const token = localStorage.getItem("accessToken");
-  if (token && typeof httpRequest.setToken === "function") {
+  if (!token) return false;
+  
+  if (typeof httpRequest.setToken === "function") {
     httpRequest.setToken(token);
   }
+  return true;
 }
 
 let detachAlbumMenu = null;
