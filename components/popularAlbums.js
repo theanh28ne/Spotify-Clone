@@ -4,14 +4,15 @@ import httpRequest from "../utils/httpRequest.js";
 import { toast } from "./notify.js";
 import { attachContextMenu } from "./contextMenu.js";
 import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
+
 export async function renderPopularAlbums() {
   const grid = document.querySelector(".hits-grid");
   if (!grid) return;
-
+  
   try {
     const data = await albumAPI.getPopular(20);
     const albums = data.albums || [];
-
+    
     grid.innerHTML = albums.map(album => `
       <div class="album-card" data-id="${album.id}">
         <div class="album-thumb">
@@ -30,7 +31,7 @@ export async function renderPopularAlbums() {
     grid.innerHTML = `<p class="error"> Không thể tải danh sách album phổ biến.</p>`;
     console.error("Lỗi khi render album:", err);
   }
-
+  
   initAlbumContextMenu();
 }
 
@@ -45,10 +46,10 @@ function ensureAuthTokenOnRequest() {
 }
 
 let detachAlbumMenu = null;
+
 function initAlbumContextMenu() {
-
   if (typeof detachAlbumMenu === "function") detachAlbumMenu();
-
+  
   detachAlbumMenu = attachContextMenu(".album-card", (targetEl) => {
     const id = targetEl.dataset.id;
     if (!id) return [];
@@ -57,13 +58,14 @@ function initAlbumContextMenu() {
     ];
   }, async (action, data, targetEl) => {
     if (action !== "like-album" || !data?.id) return;
+    
     if (!ensureAuthTokenOnRequest()) {
-          toast.info("Vui lòng đăng nhập để follow nghệ sĩ.");
-          return;
-        }
+      toast.info("Vui lòng đăng nhập để thêm album vào thư viện.");
+      return;
+    }
+    
     try {
-      // ensureAuthTokenOnRequest();
-      await httpRequest.post(`albums/${data.id}/like`, {});
+      await httpRequest.post(`albums/${data.id}/like`, {}); // ← SỬA ĐÂY
       toast.success("Đã thêm album vào thư viện.");
       triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);
     } catch (err) {
