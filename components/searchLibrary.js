@@ -1,49 +1,74 @@
 import httpRequest from "../utils/httpRequest.js";
 import { playlistAPI } from "../services/playlist.api.js";
 
-// Lưu trạng thái search
+// Library search helper — toggles a search input in the sidebar and filters .library-item in real time.
+
 let isSearching = false;
-let searchQuery = "";
-let allLibraryItems = []; // Cache tất cả items
+let searchDebounce = null;
+let cacheItems = null;
+let currentQuery = "";
 
 /**
  * Khởi tạo chức năng search library
  */
 export function initSearchLibrary() {
-  const searchBtn = document.querySelector(".search-library-btn");
-  const libraryHeader = document.querySelector(".library-header");
-  
-  if (!searchBtn || !libraryHeader) return;
-
-  // Click vào search button
-  searchBtn.addEventListener("click", () => {
-    toggleSearchMode();
+  // delegated click so button works even if rendered later
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".search-library-btn");
+    if (!btn) return;
+    // toggle
+    if (!isSearching) {
+      const container = document.querySelector(".search-library");
+      if (!container) return;
+      const inputEl = createSearchInput();
+      container.insertBefore(inputEl, container.querySelector(".sort-btn"));
+      // focus field
+      setTimeout(() => inputEl.querySelector(".library-search-field")?.focus(), 50);
+      btn.classList.add("active");
+      isSearching = true;
+      ensureCache();
+    } else {
+      exitSearchMode();
+    }
   });
 
-  console.log("✅ Search library đã được khởi tạo");
+  // Hide / reset when clicking other nav tabs
+  document.addEventListener("click", (e) => {
+    const tab = e.target.closest(".nav-tab");
+    if (!tab) return;
+    resetSearchOnTabChange();
+  });
+
+  // If library updates externally, refresh cache and refilter
+  document.addEventListener("library:updated", () => {
+    clearSearchCache();
+    if (isSearching && currentQuery) {
+      ensureCache();
+      performSearch(currentQuery);
+    }
+  });
+
+  // keyboard ESC global to close if open
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isSearching) exitSearchMode();
+  });
+
+  console.log("✅ Search library đã được khởi tạo (delegated)");
 }
 
-/**
- * Bật/tắt chế độ search
- */
+// make toggleSearchMode robust (query header lazily)
 function toggleSearchMode() {
   const searchBtn = document.querySelector(".search-library-btn");
   const libraryHeader = document.querySelector(".library-header");
-  
+  if (!searchBtn || !libraryHeader) return;
+
   if (!isSearching) {
-    // Bật search mode
     isSearching = true;
     searchBtn.classList.add("active");
-    
-    // Tạo search input
     const searchInput = createSearchInput();
     libraryHeader.appendChild(searchInput);
-    
-    // Focus vào input
-    setTimeout(() => searchInput.focus(), 100);
-    
+    setTimeout(() => searchInput.querySelector(".library-search-field")?.focus(), 100);
   } else {
-    // Tắt search mode
     exitSearchMode();
   }
 }
@@ -52,157 +77,75 @@ function toggleSearchMode() {
  * Tạo search input element
  */
 function createSearchInput() {
-  const searchContainer = document.createElement("div");
-  searchContainer.className = "library-search-container";
-  searchContainer.innerHTML = `
-    <div class="library-search-input">
-      <i class="fas fa-search"></i>
-      <input 
-        type="text" 
-        placeholder="Search in your library..." 
-        class="library-search-field"
-        autocomplete="off"
-      />
-      <button class="library-search-clear" style="display: none;">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
-
-  const input = searchContainer.querySelector(".library-search-field");
-  const clearBtn = searchContainer.querySelector(".library-search-clear");
-
-  // Xử lý input
-  input.addEventListener("input", (e) => {
-    const query = e.target.value.trim();
-    searchQuery = query;
-    
-    // Show/hide clear button
-    clearBtn.style.display = query ? "flex" : "none";
-    
-    // Thực hiện search
-    performSearch(query);
+  const wrapper = document.createElement("div");
+  wrapper.className = "library-search-wrapper";
+  Object.assign(wrapper.style, {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px",
   });
 
-  // Xử lý clear button
+  const input = document.createElement("input");
+  input.type = "search";
+  input.className = "library-search-field";
+  input.placeholder = "Search your library...";
+  Object.assign(input.style, {
+    flex: "1",
+    padding: "6px 8px",
+    borderRadius: "6px",
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "transparent",
+    color: "inherit"
+  });
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "library-search-clear-btn";
+  clearBtn.innerHTML = "&times;";
+  Object.assign(clearBtn.style, {
+    background: "transparent",
+    border: "none",
+    color: "inherit",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "4px"
+  });
+
   clearBtn.addEventListener("click", () => {
     input.value = "";
-    searchQuery = "";
-    clearBtn.style.display = "none";
-    performSearch("");
     input.focus();
+    performSearch("");
   });
 
-  // Xử lý ESC key
+  input.addEventListener("input", (e) => {
+    const q = (e.target.value || "").trim();
+    if (searchDebounce) clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => performSearch(q), 180);
+  });
+
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      exitSearchMode();
-    }
+    if (e.key === "Escape") exitSearchMode();
   });
 
-  return searchContainer;
+  wrapper.appendChild(input);
+  wrapper.appendChild(clearBtn);
+  return wrapper;
 }
 
-/**
- * Thoát search mode
- */
-function exitSearchMode() {
-  isSearching = false;
-  searchQuery = "";
-  
-  const searchBtn = document.querySelector(".search-library-btn");
-  const searchContainer = document.querySelector(".library-search-container");
-  
-  if (searchBtn) searchBtn.classList.remove("active");
-  if (searchContainer) searchContainer.remove();
-  
-  // Clear search results và hiển thị lại tất cả items
+function ensureCache() {
   const container = document.querySelector(".library-content");
-  if (container) {
-    restoreAllItems(container);
-  }
-}
-
-/**
- * Thực hiện search
- */
-async function performSearch(query) {
-  const container = document.querySelector(".library-content");
-  if (!container) return;
-
-  // Nếu query rỗng, hiển thị lại tất cả
-  if (!query) {
-    restoreAllItems(container);
-    return;
-  }
-
-  // Lấy tất cả items hiện tại nếu chưa có
-  if (allLibraryItems.length === 0) {
-    allLibraryItems = Array.from(container.querySelectorAll(".library-item"));
-  }
-
-  // Filter items theo query
-  const lowerQuery = query.toLowerCase();
-  const matchedItems = [];
-  const unmatchedItems = [];
-
-  allLibraryItems.forEach(item => {
-    const title = item.querySelector(".item-title")?.textContent?.toLowerCase() || "";
-    const subtitle = item.querySelector(".item-subtitle")?.textContent?.toLowerCase() || "";
-    
-    if (title.includes(lowerQuery) || subtitle.includes(lowerQuery)) {
-      matchedItems.push(item);
-    } else {
-      unmatchedItems.push(item);
-    }
-  });
-
-  // Hiển thị kết quả
-  container.innerHTML = "";
-  
-  if (matchedItems.length === 0) {
-    container.innerHTML = `
-      <div class="search-no-results">
-        <i class="fas fa-search"></i>
-        <p>No results found for "${query}"</p>
-      </div>
-    `;
-  } else {
-    matchedItems.forEach(item => {
-      container.appendChild(item.cloneNode(true));
-    });
-    
-    // Thêm search info
-    const searchInfo = document.createElement("div");
-    searchInfo.className = "search-info";
-    searchInfo.textContent = `Found ${matchedItems.length} result${matchedItems.length !== 1 ? "s" : ""}`;
-    container.insertBefore(searchInfo, container.firstChild);
-  }
-}
-
-/**
- * Khôi phục tất cả items
- */
-function restoreAllItems(container) {
-  if (allLibraryItems.length === 0) return;
-  
-  container.innerHTML = "";
-  
-  // Remove search info nếu có
-  const searchInfo = container.querySelector(".search-info");
-  if (searchInfo) searchInfo.remove();
-  
-  // Append lại tất cả items
-  allLibraryItems.forEach(item => {
-    container.appendChild(item.cloneNode(true));
-  });
+  if (!container) return [];
+  // cache actual DOM nodes for quick access
+  cacheItems = Array.from(container.querySelectorAll(".library-item"));
+  return cacheItems;
 }
 
 /**
  * Clear cache khi library thay đổi (được gọi từ bên ngoài)
  */
 export function clearSearchCache() {
-  allLibraryItems = [];
+  cacheItems = null;
   console.log("🗑️ Search cache cleared");
 }
 
@@ -210,12 +153,53 @@ export function clearSearchCache() {
  * Reset search state khi chuyển tab
  */
 export function resetSearchOnTabChange() {
-  if (isSearching) {
-    exitSearchMode();
-  }
-  clearSearchCache();
+  // when switching tabs, remove search input and restore full list
+  if (!isSearching) return;
+  exitSearchMode();
 }
 
+function exitSearchMode() {
+  const wrapper = document.querySelector(".library-search-wrapper");
+  if (wrapper) wrapper.remove();
+  const btn = document.querySelector(".search-library-btn");
+  if (btn) btn.classList.remove("active");
+  isSearching = false;
+  currentQuery = "";
+  clearSearchCache();
+  // show all items
+  const items = Array.from(document.querySelectorAll(".library-content .library-item"));
+  items.forEach(i => i.style.display = "");
+}
+
+function performSearch(q) {
+  currentQuery = (q || "").toLowerCase();
+  const items = cacheItems || ensureCache();
+  if (!items) return;
+  if (!currentQuery) {
+    items.forEach(i => i.style.display = "");
+    return;
+  }
+  items.forEach(i => {
+    const titleEl = i.querySelector(".item-title, .track-name, .artist-card-name, .hit-card-title");
+    const text = (titleEl?.textContent || "").toLowerCase();
+    if (text.includes(currentQuery)) i.style.display = "";
+    else i.style.display = "none";
+  });
+}
+
+// Expose utility to programmatically search (if needed)
+export function searchLibrary(query) {
+  if (!isSearching) {
+    // open search UI first
+    const btn = document.querySelector(".search-library-btn");
+    btn?.click();
+  }
+  const input = document.querySelector(".library-search-field");
+  if (input) {
+    input.value = query || "";
+    performSearch(input.value.trim());
+  }
+}
 
 // CSS cần thêm vào stylesheet
 const styles = `

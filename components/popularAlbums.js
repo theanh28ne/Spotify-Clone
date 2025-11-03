@@ -53,8 +53,12 @@ function initAlbumContextMenu() {
     ];
   }, async (action, data, targetEl) => {
     if (action !== "like-album" || !data?.id) return;
+    if (!ensureAuthTokenOnRequest()) {
+          toast.info("Vui lòng đăng nhập để follow nghệ sĩ.");
+          return;
+        }
     try {
-      ensureAuthTokenOnRequest();
+      // ensureAuthTokenOnRequest();
       await httpRequest.post(`albums/${data.id}/like`, {});
       toast.success("Đã thêm album vào thư viện.");
       triggerLibraryRefresh(LibraryEvents.TRACK_LIKED);

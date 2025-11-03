@@ -48,6 +48,41 @@
                         Recents
                         <i class="fas fa-list"></i>
                     </button>
+                    <div class="sort-modal">
+                        <div class="sort-modal-section">
+                            <div class="sort-modal-label">Sắp xếp theo</div>
+                            <div class="sort-modal-item">Gần đây</div>
+                            <div class="sort-modal-item">Mới thêm gần đây</div>
+                            <div class="sort-modal-item sort-modal-item-active">
+                                Thứ tự chữ cái
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+
+                        <div class="sort-modal-divider"></div>
+
+                        <div class="sort-modal-section">
+                            <div class="sort-modal-label">Người sáng tạo</div>
+                            <div class="sort-modal-item">Xem dưới dạng</div>
+                        </div>
+
+                        <div class="sort-modal-divider"></div>
+
+                        <div class="sort-modal-section sort-modal-icons">
+                            <button class="sort-modal-icon-btn" title="List">
+                                <i class="fas fa-list"></i>
+                            </button>
+                            <button class="sort-modal-icon-btn" title="Details">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <button class="sort-modal-icon-btn" title="Grid">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="sort-modal-icon-btn" title="Compact">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="library-content">
@@ -592,6 +627,7 @@
     <script type="module" src="./components/createPlaylist.js"></script>
     <script src="./components/toolTip.js"></script>
     <script type="module" src="./components/auth.js"></script>
+    <script type="module" src="./components/sort.js"></script>
 </body>
 
 </html>

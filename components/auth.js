@@ -1,4 +1,29 @@
 import httpRequest from "../utils/httpRequest.js";
+import { toast } from "./notify.js";
+
+// Callback để re-render trang khi auth state thay đổi
+let onAuthStateChangeCallback = null;
+let _autoReloadOnChange = false;
+
+export function setAuthStateChangeCallback(callback) {
+    onAuthStateChangeCallback = callback;
+}
+
+export function setAuthAutoReload(enable = true) {
+    _autoReloadOnChange = !!enable;
+}
+
+function triggerAuthStateChange() {
+    if (typeof onAuthStateChangeCallback === "function") {
+        try { onAuthStateChangeCallback(); } catch (err) { console.error("auth callback error:", err); }
+    }
+    // dispatch global event so other modules can listen and re-render
+    try { document.dispatchEvent(new CustomEvent("auth:changed")); } catch (err) {}
+    // optional full reload (disabled by default) - can be enabled from main.js via setAuthAutoReload(true)
+    if (_autoReloadOnChange) {
+        try { window.location.reload(); } catch (err) {}
+    }
+}
 
 export function updateAuthUI() {
     const authButtons = document.querySelector(".auth-buttons");
@@ -20,6 +45,7 @@ export async function fetchAndRenderUser() {
         if (err.response?.status === 401) {
             localStorage.removeItem("accessToken");
             updateAuthUI();
+            triggerAuthStateChange(); // Re-render khi token hết hạn
         }
     }
 }
@@ -32,6 +58,7 @@ export function initAuthUI() {
             localStorage.removeItem("accessToken");
             httpRequest.setToken(null);
             updateAuthUI();
+            triggerAuthStateChange(); // Re-render khi logout
         });
     }
 }
@@ -110,8 +137,10 @@ export function initAuthModal() {
                     const { user, access_token } = await httpRequest.post("auth/register", credentials);
                     httpRequest.setToken(access_token);
                     updateAuthUI();
-                    fetchAndRenderUser();
+                    await fetchAndRenderUser();
                     if (authModal) authModal.classList.remove("show");
+                    toast.success("Đã nhập thành công.");
+                    triggerAuthStateChange(); // Re-render khi signup thành công
                 } catch (error) {
                     const resError = error.response?.error;
                     if (resError?.code === "VALIDATION_ERROR" && Array.isArray(resError.details)) {
@@ -151,8 +180,9 @@ export function initAuthModal() {
                     const { user, access_token } = await httpRequest.post("auth/login", credentials);
                     httpRequest.setToken(access_token);
                     updateAuthUI();
-                    fetchAndRenderUser();
+                    await fetchAndRenderUser();
                     if (authModal) authModal.classList.remove("show");
+                    triggerAuthStateChange(); // Re-render khi login thành công
                 } catch (error) {
                     const resError = error.response?.error;
                     if (resError?.code === "INVALID_CREDENTIALS") {

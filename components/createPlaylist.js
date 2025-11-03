@@ -1,7 +1,12 @@
 // Plain script (non-module) to manage Create Playlist modal, upload image and create playlist via API.
 import { triggerLibraryRefresh, LibraryEvents } from "./playlists.js";
 
+
+
+
 (function () {
+
+
     const overlay = document.querySelector(".playlist-modal-overlay");
     const imageInput = document.getElementById("imageInput");
     const imagePreview = document.getElementById("imagePreview");

@@ -180,6 +180,8 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: var(--spacing-md);
+    position: relative; 
+    /* display: inline-block; */
 }
 
 .search-library-btn {
@@ -1534,4 +1536,90 @@
     .playlist-modal-image-placeholder {
         font-size: 48px;
     }
+}
+
+.sort-modal {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--spacing-xs); /* Khoảng cách nhỏ từ nút */
+  
+  background-color: var(--bg-secondary, #2a2a2a);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color, #404040);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  
+  min-width: 200px;
+  padding: var(--spacing-sm);
+  z-index: 1000;
+}
+
+.sort-modal-section {
+  padding: var(--spacing-xs) 0;
+}
+
+.sort-modal-label {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+}
+
+.sort-modal-item {
+  padding: var(--spacing-sm) var(--spacing-sm);
+  color: var(--text-primary, #ffffff);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.sort-modal-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sort-modal-item-active {
+  color: var(--color-success, #4ade80);
+}
+
+.sort-modal-divider {
+  height: 1px;
+  background-color: var(--border-color, #404040);
+  margin: var(--spacing-xs) 0;
+}
+
+.sort-modal-icons {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-start;
+}
+
+.sort-modal-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-color, #404040);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-size: 14px;
+}
+
+.sort-modal-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.sort-modal-icon-btn:active {
+  background-color: rgba(255, 255, 255, 0.15);
 }

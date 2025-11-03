@@ -8,6 +8,7 @@ import { getArtistById, getArtistPopularTracks } from "./services/artists.api.js
 import { renderAlbumHero, renderAlbumTracks } from "./components/albumTracks.js";
 import { renderArtistHero, renderArtistTracks } from "./components/artistTracks.js";
 import player from "./components/player.js";
+import { fetchAndRenderUser, updateAuthUI } from "./components/auth.js";
 
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -158,4 +159,26 @@ if (library) {
         e.preventDefault();
     });
 })();
+
+// Re-render handler khi auth thay đổi
+document.addEventListener("auth:changed", async () => {
+  try {
+    // cập nhật UI auth (login/logout buttons, user menu)
+    updateAuthUI();
+    // lấy lại thông tin user nếu có token
+    await fetchAndRenderUser().catch(() => {});
+    // refresh active library tab (click sẽ re-render nội dung)
+    const activeTab = document.querySelector(".nav-tab.active") || document.querySelector(".nav-tab");
+    if (activeTab) {
+      activeTab.click();
+    } else {
+      // fallback: emit event để modules lắng nghe
+      document.dispatchEvent(new CustomEvent("library:updated"));
+    }
+    // cũng phát event để các module khác có thể bắt
+    document.dispatchEvent(new CustomEvent("auth:refreshed"));
+  } catch (err) {
+    console.error("Error while handling auth:changed:", err);
+  }
+});
 
